@@ -67,7 +67,7 @@
     <div class="chat-history" id="chat-history"><div><strong>LexGraph:</strong> Upload files to start.</div></div>
     <div style="padding:15px;">
         <textarea id="chat-input" style="width:100%; height:80px;" placeholder="Query..."></textarea>
-        <button onclick="sendMessage()" style="width:100%; margin-top:5px;">Send</button>
+        <button id="send-btn" onclick="sendMessage()" style="width:100%; margin-top:5px;">Send</button>
     </div>
 </div>
 
@@ -124,7 +124,19 @@
     }
 
     function generateDeck() { alert("Synthesis starting..."); }
-    function sendMessage() { alert("Query sent."); }
+
+    // Defer intensive operations to prevent main thread blocking (INP issues)
+    function sendMessage() {
+        const btn = document.getElementById('send-btn');
+        btn.disabled = true;
+        btn.innerText = "Analyzing...";
+        
+        setTimeout(() => {
+            alert("Query sent.");
+            btn.disabled = false;
+            btn.innerText = "Send";
+        }, 50); 
+    }
 </script>
 </body>
 </html>
