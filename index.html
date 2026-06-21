@@ -6,33 +6,29 @@
     <title>LexGraph | Legal Case Analyzer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
-        :root { 
-            --bg-main: #fcfcfc; --text-main: #222; --bg-panel: #eee; --bg-sidebar: #fdfdfd; --border-color: #ccc; --lex-navy: #1a2a3a; --lex-gold: #c5a059;
-        }
-        body.dark-mode { 
-            --bg-main: #121212; --text-main: #e0e0e0; --bg-panel: #1e1e1e; --bg-sidebar: #1a1a1a; --border-color: #333; --lex-navy: #4a6a8a; --lex-gold: #d4af37;
-        }
-        body { margin: 0; font-family: sans-serif; color: var(--text-main); background-color: var(--bg-main); display: flex; height: 100vh; overflow: hidden; transition: background 0.3s, color 0.3s; }
+        :root { --lex-navy: #1a2a3a; --bg-main: #fcfcfc; --text-main: #222; }
+        body.dark-mode { --lex-navy: #4a6a8a; --bg-main: #121212; --text-main: #e0e0e0; }
+        body { margin: 0; font-family: sans-serif; color: var(--text-main); background-color: var(--bg-main); display: flex; height: 100vh; overflow: hidden; transition: background 0.3s; }
         
-        .sidebar { width: 260px; flex-shrink: 0; padding: 20px; border-right: 1px solid var(--border-color); background: var(--bg-sidebar); display: flex; flex-direction: column; gap: 10px; }
-        .viewer-panel { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg-panel); min-width: 0; }
-        .chat-panel { width: 300px; flex-shrink: 0; background: var(--bg-sidebar); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; }
+        .sidebar { width: 260px; flex-shrink: 0; padding: 20px; border-right: 1px solid #ccc; background: #fdfdfd; display: flex; flex-direction: column; gap: 10px; }
+        .viewer-panel { flex-grow: 1; display: flex; flex-direction: column; background: #eee; min-width: 0; }
+        .chat-panel { width: 300px; flex-shrink: 0; background: #fff; border-left: 1px solid #ccc; display: flex; flex-direction: column; }
         
-        .header { background: var(--bg-sidebar); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
-        .status-pill { padding: 5px 10px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; background: #e8f5e9; color: #2e7d32; display: none; }
+        .header { background: white; padding: 10px 20px; display: flex; justify-content: flex-end; align-items: center; border-bottom: 1px solid #ccc; gap: 10px; }
+        .status-pill { padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; background: #e8f5e9; color: #2e7d32; display: none; }
         .status-pill.active { display: block; }
-
-        .viewer-tabs { display: flex; background: var(--bg-sidebar); padding: 0 10px; border-bottom: 1px solid var(--border-color); }
-        .tab { cursor: pointer; padding: 10px 15px; font-weight: bold; font-size: 0.9rem; color: var(--text-main); border-bottom: 3px solid transparent; }
-        .tab.active { border-bottom-color: var(--lex-navy); }
+        
+        .viewer-tabs { display: flex; background: #f9f9f9; padding: 0 10px; border-bottom: 1px solid #ccc; }
+        .tab { cursor: pointer; padding: 10px 15px; font-weight: bold; font-size: 0.9rem; color: #555; border-bottom: 3px solid transparent; }
+        .tab.active { border-bottom-color: var(--lex-navy); color: var(--lex-navy); }
         
         .content-container { display: none; padding: 20px; flex: 1; overflow: auto; }
         .content-container.active { display: block; }
 
         #graph-svg { width: 100%; height: 500px; background: white; border: 1px solid #ddd; }
-        .chat-history { flex: 1; padding: 15px; overflow-y: auto; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); }
+        .chat-history { flex: 1; padding: 15px; overflow-y: auto; font-size: 0.9rem; border-bottom: 1px solid #eee; }
         
-        .file-item { cursor: pointer; padding: 5px; border-radius: 4px; margin-bottom: 4px; font-size: 0.85rem; color: var(--text-main); }
+        .file-item { cursor: pointer; padding: 5px; border-radius: 4px; margin-bottom: 4px; font-size: 0.85rem; }
         .file-item.active { background: var(--lex-navy); color: white; }
     </style>
 </head>
@@ -47,32 +43,28 @@
 
 <div class="viewer-panel">
     <div class="header">
-        <div id="active-file-label"><strong>No file selected</strong></div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <input type="password" id="api-key" placeholder="Enter Gemini API Key" style="width:140px; padding:5px;">
-            <button id="connect-btn" onclick="connectAPI()">Connect</button>
-            <div id="status-pill" class="status-pill">✓ Connected</div>
-            <button onclick="toggleTheme()" style="background:none; border:none; cursor:pointer; font-size:1.2rem;">🌙</button>
-        </div>
+        <input type="password" id="api-key" placeholder="Enter Gemini API Key" style="padding:5px;">
+        <button id="connect-btn" onclick="connectAPI()">Connect</button>
+        <div id="status-pill" class="status-pill">✓ Connected</div>
+        <button onclick="toggleTheme()" style="background:none; border:none; cursor:pointer; font-size:1.2rem;">🌙</button>
     </div>
     <div class="viewer-tabs">
         <div class="tab active" onclick="switchTab('paper')">Document</div>
         <div class="tab" onclick="switchTab('graph')">Map</div>
         <div class="tab" onclick="switchTab('deck')">Evidence</div>
         <div class="tab" onclick="switchTab('action')">Action Plan</div>
-        <button onclick="readPage()" style="margin-left:auto;">🔊 Listen</button>
     </div>
     
-    <div id="view-paper" class="content-container active"><canvas id="pdf-canvas"></canvas></div>
+    <div id="view-paper" class="content-container active">
+        <button onclick="readPage()" style="margin-bottom:10px;">🔊 Listen to Current Page</button>
+        <canvas id="pdf-canvas"></canvas>
+    </div>
     <div id="view-graph" class="content-container">
-        <svg id="graph-svg" viewBox="0 0 800 500">
-            <line x1="200" y1="250" x2="600" y2="250" stroke="#999" stroke-width="4" />
-            <circle cx="200" cy="250" r="70" fill="#1a2a3a" /><text x="200" y="255" text-anchor="middle" fill="white">Defendant</text>
-            <circle cx="600" cy="250" r="70" fill="#c5a059" /><text x="600" y="255" text-anchor="middle" fill="white">Plaintiff</text>
-        </svg>
+        <button onclick="generateDynamicMap()">Analyze Document Entities</button>
+        <svg id="graph-svg" viewBox="0 0 800 500"></svg>
     </div>
     <div id="view-deck" class="content-container">
-        <button onclick="generateDeck()">Synthesize Summary</button>
+        <button id="synth-btn" onclick="generateDeck()">Synthesize Summary</button>
         <div id="summary-output" style="margin-top: 20px;">Summary...</div>
     </div>
     <div id="view-action" class="content-container">
@@ -95,7 +87,6 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
     function toggleTheme() { document.body.classList.toggle('dark-mode'); }
-
     function connectAPI() {
         const key = document.getElementById('api-key').value;
         if(key.length > 5) document.getElementById('status-pill').classList.add('active');
@@ -107,13 +98,11 @@
     }
 
     function updateDocList() {
-        const list = document.getElementById('doc-list');
-        list.innerHTML = Object.keys(documents).map(name => `<div class="file-item" onclick="selectDoc('${name}')">📄 ${name}</div>`).join('');
+        document.getElementById('doc-list').innerHTML = Object.keys(documents).map(name => `<div class="file-item" onclick="selectDoc('${name}')">📄 ${name}</div>`).join('');
     }
 
     function selectDoc(name) {
         activeDocName = name;
-        document.getElementById('active-file-label').innerHTML = `<strong>${name}</strong>`;
         renderPDF(documents[name]);
         switchTab('paper');
     }
@@ -138,6 +127,28 @@
         window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
     }
 
+    async function generateDynamicMap() {
+        if (!activeDocName) return;
+        const pdf = await pdfjsLib.getDocument({ data: documents[activeDocName] }).promise;
+        const page = await pdf.getPage(1);
+        const textContent = await page.getTextContent();
+        const fullText = textContent.items.map(item => item.str).join(' ');
+        
+        // Simple extraction simulation
+        const entities = [];
+        if (fullText.toLowerCase().includes("plaintiff")) entities.push("Plaintiff");
+        if (fullText.toLowerCase().includes("defendant")) entities.push("Defendant");
+        
+        const svg = document.getElementById('graph-svg');
+        svg.innerHTML = `
+            <line x1="200" y1="250" x2="600" y2="250" stroke="#999" stroke-width="4" />
+            <circle cx="200" cy="250" r="70" fill="#1a2a3a" />
+            <text x="200" y="255" text-anchor="middle" fill="white">${entities[1] || 'Defendant'}</text>
+            <circle cx="600" cy="250" r="70" fill="#c5a059" />
+            <text x="600" y="255" text-anchor="middle" fill="white">${entities[0] || 'Plaintiff'}</text>
+        `;
+    }
+
     function switchTab(t) {
         document.querySelectorAll('.content-container').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(c => c.classList.remove('active'));
@@ -148,21 +159,16 @@
     function sendMessage() {
         const input = document.getElementById('chat-input');
         const history = document.getElementById('chat-history');
-        const btn = document.getElementById('send-btn');
-        const q = input.value.trim();
-        if (!q || !activeDocName) return;
-        btn.disabled = true; btn.innerText = "Analyzing...";
-        history.innerHTML += `<div><strong>You:</strong> ${q}</div>`;
-        input.value = '';
+        if (!input.value.trim()) return;
+        history.innerHTML += `<div><strong>You:</strong> ${input.value}</div>`;
         setTimeout(() => {
-            history.innerHTML += `<div><strong>LexGraph:</strong> Analysis indicates breach (Source: ${activeDocName}, Page 1).</div>`;
-            history.scrollTop = history.scrollHeight;
-            btn.disabled = false; btn.innerText = "Send";
-        }, 1000);
+            history.innerHTML += `<div><strong>LexGraph:</strong> Analysis on page 1 of ${activeDocName}: Evidence suggests a clear link between parties.</div>`;
+            input.value = '';
+        }, 800);
     }
 
-    function generateActionPlan() { document.getElementById('action-output').innerText = "1. File discovery requests.\n2. Deposition."; }
-    function generateDeck() { document.getElementById('summary-output').innerText = "Synthesis complete."; }
+    function generateActionPlan() { document.getElementById('action-output').innerText = "1. Draft subpoena.\n2. Review evidence."; }
+    function generateDeck() { document.getElementById('summary-output').innerText = "Synthesized Case Facts."; }
 </script>
 </body>
 </html>
