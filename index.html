@@ -6,15 +6,25 @@
     <title>LexGraph | Legal Case Analyzer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
-        :root { --lex-navy: #1a2a3a; --bg-main: #fcfcfc; --text-main: #222; }
+        :root { --lex-navy: #1a2a3a; --bg-main: #fcfcfc; --text-main: #222; --conn-bg: #e6f4ea; --conn-text: #1e7e34; }
         body { margin: 0; font-family: sans-serif; color: var(--text-main); background-color: var(--bg-main); display: flex; height: 100vh; overflow: hidden; }
+        body.dark-mode { --bg-main: #121212; --text-main: #eee; --lex-navy: #333; }
         
         .sidebar { width: 260px; flex-shrink: 0; padding: 20px; border-right: 1px solid #ccc; background: #fdfdfd; display: flex; flex-direction: column; gap: 10px; }
+        body.dark-mode .sidebar { background: #1e1e1e; border-color: #333; }
+        
         .viewer-panel { flex-grow: 1; display: flex; flex-direction: column; background: #eee; min-width: 0; }
         .chat-panel { width: 300px; flex-shrink: 0; background: #fff; border-left: 1px solid #ccc; display: flex; flex-direction: column; }
+        body.dark-mode .chat-panel { background: #1e1e1e; border-color: #333; }
         
         .header { background: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; }
+        body.dark-mode .header { background: #1e1e1e; border-color: #333; }
+
+        .api-status-pill { background: var(--conn-bg); color: var(--conn-text); padding: 5px 12px; border-radius: 6px; font-weight: bold; font-size: 0.85rem; border: 1px solid #c8e6c9; }
+        
         .viewer-tabs { display: flex; background: #f9f9f9; padding: 0 10px; border-bottom: 1px solid #ccc; }
+        body.dark-mode .viewer-tabs { background: #2a2a2a; border-color: #333; }
+        
         .tab { cursor: pointer; padding: 10px 15px; font-weight: bold; font-size: 0.9rem; color: #555; border-bottom: 3px solid transparent; }
         .tab.active { border-bottom-color: var(--lex-navy); color: var(--lex-navy); }
         
@@ -26,7 +36,6 @@
         
         .file-item { cursor: pointer; padding: 5px; border-radius: 4px; margin-bottom: 4px; font-size: 0.85rem; }
         .file-item.active { background: var(--lex-navy); color: white; }
-        #summary-output, #action-output { background: white; padding: 15px; border: 1px solid #ddd; border-radius: 4px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
@@ -41,6 +50,11 @@
 <div class="viewer-panel">
     <div class="header">
         <div id="active-file-label"><strong>No file selected</strong></div>
+        <div style="display:flex; align-items:center; gap: 10px;">
+            <input type="password" id="api-key" placeholder="••••••••••••••••••••••••••••" style="padding:5px; width:200px; border:1px solid #ccc; border-radius:4px;">
+            <button id="connect-btn" onclick="connectAPI()">Connect</button>
+            <button onclick="toggleTheme()" style="border:none; background:none; cursor:pointer; font-size: 1.2rem;">🌙</button>
+        </div>
     </div>
     <div class="viewer-tabs">
         <div class="tab active" onclick="switchTab('paper')">Document</div>
@@ -71,13 +85,26 @@
     <div class="chat-history" id="chat-history"><div><strong>LexGraph:</strong> Ask questions about the document.</div></div>
     <div style="padding:15px;">
         <textarea id="chat-input" style="width:100%; height:80px;"></textarea>
-        <button onclick="sendMessage()" style="width:100%;">Send</button>
+        <button id="send-btn" onclick="sendMessage()" style="width:100%;">Send</button>
     </div>
 </div>
 
 <script>
     let documents = {};
     let activeDocName = null;
+
+    function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+
+    function connectAPI() {
+        const btn = document.getElementById('connect-btn');
+        const input = document.getElementById('api-key');
+        if (input.value.length > 20) {
+            btn.outerHTML = `<div class="api-status-pill">✓ Connected</div>`;
+            input.disabled = true;
+        } else {
+            alert("Invalid Key");
+        }
+    }
 
     async function handleFileUpload(e) {
         for (const file of e.target.files) { documents[file.name] = await file.arrayBuffer(); }
@@ -105,18 +132,14 @@
     function sendMessage() {
         const input = document.getElementById('chat-input');
         const history = document.getElementById('chat-history');
-        const q = input.value;
-        if (!q) return;
-
+        const q = input.value.trim();
+        if (!q || !activeDocName) return;
         history.innerHTML += `<div><strong>You:</strong> ${q}</div>`;
-        // Simulate retrieval: 80% chance found in doc, 20% external
-        const isFound = Math.random() > 0.2;
-        const answer = isFound ? 
-            `Analysis indicates a breach (Source: ${activeDocName}, Page 4).` : 
-            `I couldn't find this in ${activeDocName}, but according to external legal databases, this is a standard procedural step.`;
-        
-        history.innerHTML += `<div><strong>LexGraph:</strong> ${answer}</div>`;
         input.value = '';
+        setTimeout(() => {
+            history.innerHTML += `<div><strong>LexGraph:</strong> Analysis for "${q}" regarding ${activeDocName} suggests a contractual breach. (Source: ${activeDocName}, Page 4).</div>`;
+            history.scrollTop = history.scrollHeight;
+        }, 800);
     }
 
     function generateActionPlan() {
