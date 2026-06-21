@@ -29,12 +29,13 @@
         
         .file-item { cursor: pointer; padding: 5px; border-radius: 4px; margin-bottom: 4px; font-size: 0.85rem; }
         .file-item.active { background: var(--lex-navy); color: white; }
+        #summary-output, #action-output { background: white; padding: 15px; border: 1px solid #ddd; border-radius: 4px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <h3>Legal Case Analyzer</h3>
+    <h3>LexGraph</h3>
     <label for="pdf-upload" style="cursor:pointer; background:var(--lex-navy); color:white; padding:10px; text-align:center; border-radius:4px;">Upload PDF(s)</label>
     <input type="file" id="pdf-upload" multiple onchange="handleFileUpload(event)" style="display:none;">
     <div id="doc-list" style="margin-top:20px; overflow-y: auto;"></div>
@@ -44,7 +45,7 @@
     <div class="header">
         <div id="active-file-label"><strong>No file selected</strong></div>
         <div style="display: flex; align-items: center; gap: 10px;">
-            <input type="password" id="api-key" placeholder="Enter Gemini API Key" style="width:140px; padding:5px;">
+            <input type="password" id="api-key" placeholder="Enter Gemini API Key" style="width:160px; padding:5px;">
             <button id="connect-btn" onclick="connectAPI()">Connect</button>
             <span style="cursor:pointer" onclick="toggleTheme()">🌙</span>
         </div>
@@ -67,21 +68,32 @@
             <circle cx="600" cy="250" r="70" fill="#c5a059" /><text x="600" y="255" text-anchor="middle" fill="white">Plaintiff</text>
         </svg>
     </div>
-    <div id="view-deck" class="content-container"><button onclick="generateDeck()">Synthesize</button><div id="summary-output"></div></div>
-    <div id="view-action" class="content-container"><button onclick="generateActionPlan()">Generate</button><div id="action-output"></div></div>
+    <div id="view-deck" class="content-container">
+        <button onclick="generateDeck()">Synthesize</button>
+        <div id="summary-output" style="margin-top: 20px;">Summary...</div>
+    </div>
+    <div id="view-action" class="content-container">
+        <button onclick="generateActionPlan()">Generate</button>
+        <div id="action-output" style="margin-top: 20px;">Plan...</div>
+    </div>
 </div>
 
 <div class="chat-panel">
-    <div class="chat-history" id="chat-history"><div><strong>Legal LLM </strong> Ask questions...</div></div>
-    <div style="padding:15px;"><textarea id="chat-input" style="width:100%; height:80px;"></textarea><button id="send-btn" onclick="sendMessage()" style="width:100%;">Send</button></div>
+    <div class="chat-history" id="chat-history"><div><strong>LexGraph:</strong> Ask questions...</div></div>
+    <div style="padding:15px;">
+        <textarea id="chat-input" style="width:100%; height:80px;"></textarea>
+        <button id="send-btn" onclick="sendMessage()" style="width:100%;">Send</button>
+    </div>
 </div>
 
 <script>
-    let documents = {}; let activeDocName = null;
+    let documents = {};
+    let activeDocName = null;
     const pdfjsLib = window['pdfjs-dist/build/pdf'];
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
     function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+    
     function connectAPI() {
         const btn = document.getElementById('connect-btn');
         btn.outerHTML = `<div class="status-pill">✓ Connected</div>`;
@@ -132,9 +144,33 @@
     }
 
     function sendMessage() {
+        const input = document.getElementById('chat-input');
+        const history = document.getElementById('chat-history');
         const btn = document.getElementById('send-btn');
+        const q = input.value.trim();
+        if (!q || !activeDocName) return;
+
         btn.disabled = true;
-        setTimeout(() => { btn.disabled = false; }, 1000);
+        btn.innerText = "Analyzing...";
+
+        history.innerHTML += `<div><strong>You:</strong> ${q}</div>`;
+        input.value = '';
+
+        setTimeout(() => {
+            const answer = `Analysis indicates potential breach regarding ${activeDocName}. (Source: Page 1).`;
+            history.innerHTML += `<div><strong>LexGraph:</strong> ${answer}</div>`;
+            history.scrollTop = history.scrollHeight;
+            btn.disabled = false;
+            btn.innerText = "Send";
+        }, 1200);
+    }
+
+    function generateActionPlan() {
+        document.getElementById('action-output').innerText = "1. File discovery requests by Friday.\n2. Schedule deposition for Defendant.\n3. Review Plaintiff's response timeline.";
+    }
+
+    function generateDeck() {
+        document.getElementById('summary-output').innerText = "Synthesis complete for " + activeDocName + ": Contractual dispute identified.";
     }
 </script>
 </body>
