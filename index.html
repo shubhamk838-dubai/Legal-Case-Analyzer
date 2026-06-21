@@ -3,28 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Legal Case Analyzer</title>
+    <title>LexGraph | Legal Case Analyzer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
-        :root { --lex-navy: #1a2a3a; --bg-main: #fcfcfc; --text-main: #222; --conn-bg: #e6f4ea; --conn-text: #1e7e34; }
-        body.dark-mode { --bg-main: #121212; --text-main: #eee; --lex-navy: #333; }
+        :root { --lex-navy: #1a2a3a; --bg-main: #fcfcfc; --text-main: #222; --success: #28a745; --bg-success: #e8f5e9; }
         body { margin: 0; font-family: sans-serif; color: var(--text-main); background-color: var(--bg-main); display: flex; height: 100vh; overflow: hidden; }
         
         .sidebar { width: 260px; flex-shrink: 0; padding: 20px; border-right: 1px solid #ccc; background: #fdfdfd; display: flex; flex-direction: column; gap: 10px; }
-        body.dark-mode .sidebar { background: #1e1e1e; border-color: #333; }
-        
         .viewer-panel { flex-grow: 1; display: flex; flex-direction: column; background: #eee; min-width: 0; }
         .chat-panel { width: 300px; flex-shrink: 0; background: #fff; border-left: 1px solid #ccc; display: flex; flex-direction: column; }
-        body.dark-mode .chat-panel { background: #1e1e1e; border-color: #333; }
         
         .header { background: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; }
-        body.dark-mode .header { background: #1e1e1e; border-color: #333; }
-
-        .api-status-pill { background: var(--conn-bg); color: var(--conn-text); padding: 5px 12px; border-radius: 6px; font-weight: bold; font-size: 0.85rem; border: 1px solid #c8e6c9; }
+        .status-pill { background: var(--bg-success); color: var(--success); padding: 5px 10px; border-radius: 4px; font-weight: bold; border: 1px solid var(--success); }
         
-        .viewer-tabs { display: flex; background: #f9f9f9; padding: 0 10px; border-bottom: 1px solid #ccc; }
-        body.dark-mode .viewer-tabs { background: #2a2a2a; border-color: #333; }
-        
+        .viewer-tabs { display: flex; background: #f9f9f9; padding: 0 10px; border-bottom: 1px solid #ccc; justify-content: space-between; }
+        .tab-group { display: flex; }
         .tab { cursor: pointer; padding: 10px 15px; font-weight: bold; font-size: 0.9rem; color: #555; border-bottom: 3px solid transparent; }
         .tab.active { border-bottom-color: var(--lex-navy); color: var(--lex-navy); }
         
@@ -41,7 +34,7 @@
 <body>
 
 <div class="sidebar">
-    <h3>Legal Case Analyzer</h3>
+    <h3>LexGraph</h3>
     <label for="pdf-upload" style="cursor:pointer; background:var(--lex-navy); color:white; padding:10px; text-align:center; border-radius:4px;">Upload PDF(s)</label>
     <input type="file" id="pdf-upload" multiple onchange="handleFileUpload(event)" style="display:none;">
     <div id="doc-list" style="margin-top:20px; overflow-y: auto;"></div>
@@ -50,17 +43,20 @@
 <div class="viewer-panel">
     <div class="header">
         <div id="active-file-label"><strong>No file selected</strong></div>
-        <div style="display:flex; align-items:center; gap: 10px;">
-            <input type="password" id="api-key" placeholder="••••••••••••••••" style="padding:5px; width:150px; border:1px solid #ccc; border-radius:4px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="password" id="api-key" placeholder="••••••••••••••••" style="width:140px; padding:5px;">
             <button id="connect-btn" onclick="connectAPI()">Connect</button>
-            <button onclick="toggleTheme()" style="border:none; background:none; cursor:pointer; font-size: 1.2rem;">🌙</button>
+            <span style="cursor:pointer" onclick="toggleTheme()">🌙</span>
         </div>
     </div>
     <div class="viewer-tabs">
-        <div class="tab active" onclick="switchTab('paper')">Document</div>
-        <div class="tab" onclick="switchTab('graph')">Map</div>
-        <div class="tab" onclick="switchTab('deck')">Evidence</div>
-        <div class="tab" onclick="switchTab('action')">Action Plan</div>
+        <div class="tab-group">
+            <div class="tab active" onclick="switchTab('paper')">Document</div>
+            <div class="tab" onclick="switchTab('graph')">Map</div>
+            <div class="tab" onclick="switchTab('deck')">Evidence</div>
+            <div class="tab" onclick="switchTab('action')">Action Plan</div>
+        </div>
+        <button onclick="readPage()" style="margin: 5px; padding: 5px 10px;">🔊 Listen</button>
     </div>
     
     <div id="view-paper" class="content-container active"><canvas id="pdf-canvas"></canvas></div>
@@ -71,74 +67,61 @@
             <circle cx="600" cy="250" r="70" fill="#c5a059" /><text x="600" y="255" text-anchor="middle" fill="white">Plaintiff</text>
         </svg>
     </div>
-    <div id="view-deck" class="content-container">
-        <button id="synth-btn" onclick="generateDeck()">Synthesize Summary</button>
-        <div id="summary-output" style="margin-top: 20px;">Summary...</div>
-    </div>
-    <div id="view-action" class="content-container">
-        <button onclick="generateActionPlan()">Generate Action Plan</button>
-        <div id="action-output" style="margin-top: 20px;">Plan...</div>
-    </div>
+    <div id="view-deck" class="content-container"><button onclick="generateDeck()">Synthesize</button><div id="summary-output"></div></div>
+    <div id="view-action" class="content-container"><button onclick="generateActionPlan()">Generate</button><div id="action-output"></div></div>
 </div>
 
 <div class="chat-panel">
-    <div class="chat-history" id="chat-history"><div><strong>LexGraph:</strong> Ask questions about the document.</div></div>
-    <div style="padding:15px;">
-        <textarea id="chat-input" style="width:100%; height:80px;"></textarea>
-        <button id="send-btn" onclick="sendMessage()" style="width:100%;">Send</button>
-    </div>
+    <div class="chat-history" id="chat-history"><div><strong>LexGraph:</strong> Ask questions...</div></div>
+    <div style="padding:15px;"><textarea id="chat-input" style="width:100%; height:80px;"></textarea><button id="send-btn" onclick="sendMessage()" style="width:100%;">Send</button></div>
 </div>
 
 <script>
-    let documents = {};
-    let activeDocName = null;
+    let documents = {}; let activeDocName = null;
     const pdfjsLib = window['pdfjs-dist/build/pdf'];
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
     function toggleTheme() { document.body.classList.toggle('dark-mode'); }
-
     function connectAPI() {
         const btn = document.getElementById('connect-btn');
-        const input = document.getElementById('api-key');
-        if (input.value.length > 10) {
-            btn.outerHTML = `<div class="api-status-pill">✓ Connected</div>`;
-            input.disabled = true;
-        }
+        btn.outerHTML = `<div class="status-pill">✓ Connected</div>`;
     }
 
     async function handleFileUpload(e) {
-        // Use requestAnimationFrame to yield to the main thread during processing
-        for (const file of e.target.files) {
-            const buffer = await file.arrayBuffer();
-            documents[file.name] = buffer;
-        }
+        for (const file of e.target.files) { documents[file.name] = await file.arrayBuffer(); }
         updateDocList();
     }
 
     function updateDocList() {
         const list = document.getElementById('doc-list');
-        list.innerHTML = Object.keys(documents).map(name => `<div class="file-item ${name === activeDocName ? 'active' : ''}" onclick="selectDoc('${name}')">📄 ${name}</div>`).join('');
+        list.innerHTML = Object.keys(documents).map(name => `<div class="file-item" onclick="selectDoc('${name}')">📄 ${name}</div>`).join('');
     }
 
     function selectDoc(name) {
         activeDocName = name;
         document.getElementById('active-file-label').innerHTML = `<strong>${name}</strong>`;
-        // Defer rendering to prevent blocking
-        setTimeout(() => renderPDF(documents[name]), 50);
-        updateDocList();
+        renderPDF(documents[name]);
         switchTab('paper');
     }
 
     async function renderPDF(data) {
-        try {
-            const pdf = await pdfjsLib.getDocument({ data }).promise;
-            const page = await pdf.getPage(1);
-            const viewport = page.getViewport({ scale: 1.0 });
-            const canvas = document.getElementById('pdf-canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.height = viewport.height; canvas.width = viewport.width;
-            await page.render({ canvasContext: ctx, viewport }).promise;
-        } catch (e) { console.error(e); }
+        const pdf = await pdfjsLib.getDocument({ data }).promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 1.0 });
+        const canvas = document.getElementById('pdf-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.height = viewport.height; canvas.width = viewport.width;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+    }
+
+    async function readPage() {
+        if (!activeDocName) return;
+        const pdf = await pdfjsLib.getDocument({ data: documents[activeDocName] }).promise;
+        const page = await pdf.getPage(1);
+        const textContent = await page.getTextContent();
+        const text = textContent.items.map(item => item.str).join(' ');
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
     }
 
     function switchTab(t) {
@@ -149,29 +132,9 @@
     }
 
     function sendMessage() {
-        const input = document.getElementById('chat-input');
-        const history = document.getElementById('chat-history');
         const btn = document.getElementById('send-btn');
-        const q = input.value.trim();
-        if (!q || !activeDocName) return;
-        
-        btn.disabled = true; btn.innerText = "Analyzing...";
-        history.innerHTML += `<div><strong>You:</strong> ${q}</div>`;
-        input.value = '';
-
-        setTimeout(() => {
-            history.innerHTML += `<div><strong>LexGraph:</strong> Analysis for "${q}" regarding ${activeDocName} suggests a potential contractual breach. (Source: ${activeDocName}, Page 4).</div>`;
-            history.scrollTop = history.scrollHeight;
-            btn.disabled = false; btn.innerText = "Send";
-        }, 800);
-    }
-
-    function generateActionPlan() {
-        document.getElementById('action-output').innerText = "1. File discovery requests by Friday.\n2. Schedule deposition for Defendant.\n3. Review Plaintiff's response timeline.";
-    }
-
-    function generateDeck() {
-        document.getElementById('summary-output').innerText = "Synthesis complete: Contractual dispute identified.";
+        btn.disabled = true;
+        setTimeout(() => { btn.disabled = false; }, 1000);
     }
 </script>
 </body>
