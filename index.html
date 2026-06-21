@@ -15,7 +15,6 @@
         .chat-panel { width: 300px; flex-shrink: 0; background: #fff; border-left: 1px solid #ccc; display: flex; flex-direction: column; }
         
         .header { background: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; }
-        .header-controls { display: flex; align-items: center; gap: 10px; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; display: inline-block; }
         .status-dot.connected { background: #28a745; }
 
@@ -47,10 +46,10 @@
 <div class="viewer-panel">
     <div class="header">
         <div id="active-file-label"><strong>No file selected</strong></div>
-        <div class="header-controls">
-            <span id="status-dot" class="status-dot"></span>
+        <div style="display:flex; align-items:center; gap:10px;">
             <input type="password" id="api-key" placeholder="Enter Gemini API Key" style="width:140px; padding:5px;">
             <button id="connect-btn" onclick="connectAPI()">Connect</button>
+            <span id="status-dot" class="status-dot"></span>
             <span style="cursor:pointer;" onclick="toggleTheme()">🌙</span>
         </div>
     </div>
@@ -126,7 +125,7 @@
     }
 
     function readPage() {
-        const text = "This is a simulated reading. The plaintiff alleges a breach of contract regarding delayed delivery.";
+        const text = "This is a simulated reading of the document regarding the current contract dispute.";
         window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
     }
 
@@ -150,27 +149,29 @@
     function sendMessage() {
         const input = document.getElementById('chat-input');
         const history = document.getElementById('chat-history');
-        const btn = document.getElementById('send-btn');
         const q = input.value.trim().toLowerCase();
         
         if (!q || !activeDocName) return;
 
-        btn.disabled = true;
-        history.innerHTML += `<div><strong>You:</strong> ${q}</div>`;
+        history.innerHTML += `<div><strong>You:</strong> ${input.value}</div>`;
         input.value = '';
 
+        // Keyword-based routing logic
         setTimeout(() => {
             let answer = "";
-            // Intelligent logic: Check document keywords vs general
-            if (q.includes("breach") || q.includes("contract") || q.includes("plaintiff")) {
+            const isDocRelated = q.includes("case") || q.includes("breach") || q.includes("contract") || q.includes("what is");
+            const isProcedural = q.includes("resolve") || q.includes("how can") || q.includes("steps") || q.includes("procedure");
+
+            if (isDocRelated) {
                 answer = `Analysis indicates a breach (Source: ${activeDocName}, Page 1).`;
+            } else if (isProcedural) {
+                answer = "Based on external legal databases, resolving this typically involves: 1. Formal notice, 2. Negotiation, 3. Litigation.";
             } else {
-                answer = `Based on general legal knowledge, this matter typically follows standard civil litigation procedures in India.`;
+                answer = "I am unsure about that specific inquiry. Could you ask about the case summary or procedural steps?";
             }
             
             history.innerHTML += `<div><strong>Legal LLM:</strong> ${answer}</div>`;
             history.scrollTop = history.scrollHeight;
-            btn.disabled = false;
         }, 1000);
     }
 
